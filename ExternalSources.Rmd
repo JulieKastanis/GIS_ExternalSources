@@ -54,7 +54,7 @@ library(mapproj)
 library(ggmap)
 ```
 
-
+Simple distribution map of Chrosomus erythrogaster using gbif data 
 
 ```{r dismo gbif data, echo=TRUE, message=FALSE, warning=FALSE}
 chrom_dismo <- gbif("chrosomus", species = "erythrogaster", ext = c(-91,-81, 36, 40),
@@ -82,7 +82,7 @@ ggplot(data = chrom_dismo_df, aes(x=x, y=y)) +
 ```
 
 
-Here I limited my species counts to 2000 individuals per species
+Here I limited my species counts to 2000 individuals per species and added a second species Chrosomus cumberlandensis
 
 ```{r gbif lookup, echo=TRUE, message=FALSE, warning=FALSE}
 chrom_rgbif <- occ_data(scientificName = "Chrosomus erythrogaster",
@@ -142,7 +142,7 @@ ggplot() +
         panel.grid.minor = element_blank(),
         panel.background = element_rect(fill = "lightblue"))
 ```
-
+Interactive gbif map that looks at just Chrosomus erythrogaster colored by year recorded. 
 
 ```{r legend added}
 pal <- colorNumeric(
@@ -175,6 +175,7 @@ leaflet(chrom_rgbif_df) %>%
 
 <center>![Figure 1. Dung Fly](images/yellow-dung-fly.jpg){width=40%}</center>
 
+Dryad data on Dung Flies that looks at clutch size with altitude. Data also collected in Europe, but here we will just look at North America.  
 
 ```{r data_Dung}
 Dung_Fly <- read.csv("Dung_Fly.csv")
@@ -212,7 +213,7 @@ main_map <- ggplot(Dung_Fly, aes(Longitude, Latitude)) +
 main_map
 ```
 
-
+Bioclim data with consideration of a few environmental factors 
 
 
 ```{r species distribution, echo=TRUE, message=FALSE, warning=FALSE}
@@ -245,7 +246,7 @@ gplot(presence_model) +
   geom_point(data = chrom_rgbif_df, aes(x = x, y = y), size = 2, color = "black", alpha = 0.5) +
   scale_fill_gradientn(colours=c("brown","yellow","darkgreen"), "Probability") +
   coord_fixed(xlim = c(-107,-65), ylim = c(24,50)) +
-  xlab("Longitude") + ylab("Latitude") + ggtitle("Probability of PILO Occurrence") + 
+  xlab("Longitude") + ylab("Latitude") + ggtitle("Probability of Chrosomus erythrogaster Occurrence") + 
   theme_bw() + theme(plot.title = element_text(hjust = 0.5)) + theme(legend.position = "right") +
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
