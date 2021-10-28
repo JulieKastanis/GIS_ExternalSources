@@ -1,0 +1,304 @@
+<body style="background-color:lightblue;">
+
+
+---
+title: GIS Assignment 2: External Data Sources 
+---
+
+```{=html}
+<style type="text/css">
+h1.title {
+  font-size: 40px;
+  font-family: "Times New Roman", Times, serif;
+  color: Black;
+  text-align: center;
+}
+h4.author { /* Header 4 - and the author and data headers use this too  */
+  font-size: 25px;
+  font-family: "Times New Roman", Times, serif;
+  font-weight: bold;
+  color: #D02349;
+  text-align: center;
+}
+body {
+  font-family: Helvetica;
+  font-size: 12pt;
+}
+.zoom {
+  transform-origin: 40% 50% 0;
+  transition: transform .2s;
+  margin: 0 auto;
+}
+.zoom img{
+	width:auto;
+	height:auto;	
+}
+.zoom:hover {
+  transform: scale(2);
+}
+th, td {padding: 5px;}
+</style>
+```
+
+
+```{r Packages, message=FALSE, warning=FALSE, echo=TRUE, results='hide'}
+packages<-c("cowplot","dismo","leaflet","maps","mapdata","raster","rasterVis","readxl","rgbif","rgdal","tidyverse","utils","rdryad")
+sapply(packages, library, character.only=T)
+```
+
+```{r library}
+library(ggplot2)
+library(maps)
+library(OpenStreetMap)
+library(mapproj)
+library(ggmap)
+```
+
+
+
+```{r dismo gbif data, echo=TRUE, message=FALSE, warning=FALSE}
+chrom_dismo <- gbif("chrosomus", species = "erythrogaster", ext = c(-91,-81, 36, 40),
+                   geo = TRUE, sp = TRUE, download = TRUE,
+                   removeZeros = TRUE)
+```
+
+
+
+```{r simple dismo gbif map, echo=TRUE, message=FALSE, warning=FALSE, fig.height=6, fig.width=7}
+chrom_dismo_df <- cbind.data.frame(chrom_dismo@coords[,1],
+                                  chrom_dismo@coords[,2])
+colnames(chrom_dismo_df) <- c("x","y")
+us <- map_data("state")
+ggplot(data = chrom_dismo_df, aes(x=x, y=y)) +
+  geom_polygon(data = us, aes(x=long, y = lat, group = group),
+               fill = "white", color="black") +
+  geom_point() + xlab("Longitude") + ylab("Latitude") +
+  coord_fixed(xlim = c(-93,-76), ylim = c(33, 60)) +
+  xlab("Longitude") + ylab("Latitude") + ggtitle("Chromsomus erythrogaster") + 
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "lightblue"))
+```
+
+
+Here I limited my species counts to 2000 individuals per species
+
+```{r gbif lookup, echo=TRUE, message=FALSE, warning=FALSE}
+chrom_rgbif <- occ_data(scientificName = "Chrosomus erythrogaster",
+                 hasCoordinate = TRUE, limit = 2000,
+                 decimalLongitude = "-130, -40", 
+                 decimalLatitude = "30, 80")
+
+cumb_rgbif <- occ_data(scientificName = "Chrosomus cumberlandensis",
+                 hasCoordinate = TRUE, limit = 2000,
+                 decimalLongitude = "-130, -40", 
+                 decimalLatitude = "30, 80")
+```
+
+
+
+<center>![Figure 2. Blackside Dace (Chrosomus cumberlandensis)](images/Phoxinus_cumberlandensis.jpg){width=40%}</center>
+
+
+<center>![Figure 3. Southern Redbelly Dace (Chrosomus erythrogaster)](images/SouthernRedbellyDace.png){width=40%}</center>
+
+
+```{r chrom cum data, echo=TRUE, message=FALSE, warning=FALSE}
+
+chrom_rgbif_df <- cbind.data.frame(chrom_rgbif$data$species,
+                                  chrom_rgbif$data$decimalLatitude,
+                                  chrom_rgbif$data$decimalLongitude,
+                                  chrom_rgbif$data$stateProvince,
+                                  chrom_rgbif$data$year)
+
+
+cumb_rgbif_df <- cbind.data.frame(cumb_rgbif$data$species,
+                                  cumb_rgbif$data$decimalLatitude,
+                                  cumb_rgbif$data$decimalLongitude,
+                                  cumb_rgbif$data$stateProvince,
+                                  cumb_rgbif$data$year)
+colnames(chrom_rgbif_df) <- c("species","y","x","state","year")
+colnames(cumb_rgbif_df) <- c("species","y","x","state","year")
+chrom_rgbif_df <- chrom_rgbif_df[complete.cases(chrom_rgbif_df[1:4]),]
+cumb_rgbif_df <- cumb_rgbif_df[complete.cases(cumb_rgbif_df[1:4]),]
+```
+
+
+
+```{r rgbif map, echo=TRUE, message=FALSE, warning=FALSE, fig.height=6, fig.width=8}
+ggplot() +
+  geom_polygon(data = us, aes(x=long, y = lat, group = group),
+               fill = "white", color="black") +
+  geom_point(data = chrom_rgbif_df, aes(x=x, y=y, color = species), size = 3) +
+  geom_point(data = cumb_rgbif_df, aes(x=x, y=y, color = species), size = 3) +  
+  coord_fixed(xlim = c(-107,-65), ylim = c(24,50)) +
+  xlab("Longitude") + ylab("Latitude") + ggtitle("Chrosomus erythrogaster and Chrosomus cumberlandensis") + 
+  guides(color=guide_legend("Legend", override.aes = list(size = 4))) +
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.position = "bottom") +
+  theme(legend.title.align = 0.5, legend.box.just = "center") +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "lightblue"))
+```
+
+
+```{r legend added}
+pal <- colorNumeric(
+  palette = "RdYlBu",
+  domain = chrom_rgbif_df$year)
+```
+
+
+```{r interactive gbif map, echo=TRUE, message=FALSE, warning=FALSE, fig.height=8, fig.width=10}
+colors <- colorFactor(c("#F8766D","#00BA38","#619CFF"), chrom_rgbif_df$year)
+leaflet(chrom_rgbif_df) %>% 
+  addTiles() %>% 
+  addCircleMarkers(chrom_rgbif_df$x,
+                   chrom_rgbif_df$y,
+                   popup = chrom_rgbif_df$species,
+                   label= chrom_rgbif_df$year,
+                   color = ~pal(year),
+                   weight = 1,
+                   fillOpacity = 0.7) %>%
+  addMiniMap(position = 'topright',
+             width = 100, 
+             height = 100,
+             toggleDisplay = FALSE) %>%
+  addScaleBar(position = "bottomright")%>%
+  addLegend("bottomleft", pal = pal, values = chrom_rgbif_df$year,
+    title = "Year Recorded",
+    labFormat = labelFormat(),
+    opacity = 1)
+```
+
+<center>![Figure 1. Dung Fly](images/yellow-dung-fly.jpg){width=40%}</center>
+
+
+```{r data_Dung}
+Dung_Fly <- read.csv("Dung_Fly.csv")
+```
+
+
+```{r view data}
+View(Dung_Fly)
+```
+
+
+
+```{r europe and canada}
+canada <- getData('GADM' , country = "CAN", level=0)
+```
+
+```{r dryad map, echo=TRUE, message=FALSE, warning=FALSE}
+world <- map_data("worldHires")
+main_map <- ggplot(Dung_Fly, aes(Longitude, Latitude)) +
+  geom_polygon(data = us, aes(x=long, y = lat, group = group),
+               fill = "gray", color="white") +
+   geom_polygon(data = canada, aes(x=long, y = lat, group = group),
+               fill = "gray", color="white") +
+  geom_point(aes(color = Altitude, size = `Clutch.Size..First.clutch.`)) +
+  coord_fixed(xlim = c(-125,-66), ylim = c(20,60)) +
+  xlab("Longitude") + ylab("Latitude") + ggtitle("Dung Fly Clutch Size and Altitude") + 
+  guides(color=guide_legend("Altitude", override.aes = list(size = 3))) + 
+  guides(size=guide_legend("Clutch.Size..First.clutch.")) +  
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.position = "right") +
+  theme(legend.title.align = 0.5, legend.box.just = "center") +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "lightblue"))
+main_map
+```
+
+
+
+
+```{r species distribution, echo=TRUE, message=FALSE, warning=FALSE}
+bioclim <- getData(name = "worldclim", res = 2.5, var = "bio", path = "./")
+names(bioclim) <- c("Ann Mean Temp","Mean Diurnal Range","Isothermality","Temperature Seasonality",
+                    "Max Temp Warmest Mo","Min Temp Coldest Mo","Ann Temp Range","Mean Temp Wettest Qtr",
+                    "Mean Temp Driest Qtr","Mean Temp Warmest Qtr","Mean Temp Coldest Qtr","Annual Precip",
+                    "Precip Wettest Mo","Precip Driest Mo","Precip Seasonality","Precip Wettest Qtr",
+                    "Precip Driest Qtr","Precip Warmest Qtr","Precip Coldest Qtr")
+bio_extent <- extent(x = c(
+  min(chrom_rgbif_df$x),
+  max(chrom_rgbif_df$x),
+  min(chrom_rgbif_df$y),
+  max(chrom_rgbif_df$y)))
+bioclim_extent <- crop(x = bioclim, y = bio_extent)
+bioclim_model <- bioclim(x = bioclim_extent, p = cbind(chrom_rgbif_df$x,chrom_rgbif_df$y))
+presence_model <- dismo::predict(object = bioclim_model, 
+                                 x = bioclim_extent, 
+                                 ext = bio_extent)
+```
+
+
+```{r species distribution maps, echo=TRUE, message=FALSE, warning=FALSE, fig.height=6, fig.width=10}
+gplot(presence_model) + 
+  geom_polygon(data = us, aes(x= long, y = lat, group = group),
+               fill = "gray", color="black") +
+  geom_raster(aes(fill=value)) +
+  geom_polygon(data = us, aes(x= long, y = lat, group = group),
+               fill = NA, color="black") +
+  geom_point(data = chrom_rgbif_df, aes(x = x, y = y), size = 2, color = "black", alpha = 0.5) +
+  scale_fill_gradientn(colours=c("brown","yellow","darkgreen"), "Probability") +
+  coord_fixed(xlim = c(-107,-65), ylim = c(24,50)) +
+  xlab("Longitude") + ylab("Latitude") + ggtitle("Probability of PILO Occurrence") + 
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5)) + theme(legend.position = "right") +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "lightblue"))
+```
+
+```{r leaflet species distribution, echo=TRUE, message=FALSE, warning=FALSE, fig.height=8, fig.width=10}
+colors <- c("brown","yellow","darkgreen")
+leaflet() %>% 
+  addTiles() %>%
+  addRasterImage(presence_model, colors = colors, opacity = 0.8) %>%
+  addCircleMarkers(chrom_rgbif_df$x,
+                   chrom_rgbif_df$y,
+                   weight = 1,
+                   color = "green",
+                   fillColor = "blue",
+                   fillOpacity = 0.7) %>%
+  addMiniMap(position = 'topright',
+             width = 100, 
+             height = 100,
+             toggleDisplay = FALSE) %>%
+  addScaleBar(position = "bottomright")
+
+```
+
+
+```{r state map}  
+state <- map_data("state")
+county <- map_data("county")
+point <- data.frame("x" = -84.7471, "y" = 34.6953)
+```
+
+```{r view_data_again}
+View(chrom_rgbif_df)
+```
+
+```{r inset map, echo=TRUE, message=FALSE, warning=FALSE}
+inset <- ggplot() + 
+  geom_polygon(data = us, aes(x=long, y = lat, group = group),
+               fill = "yellow", color="green") +
+  geom_polygon(data = canada, aes(x=long, y = lat, group = group),
+               fill = "pink", color="green") +
+  geom_point(data = Dung_Fly, aes(x=Longitude, y=Latitude, color = Clutch.Size..First.clutch.), size = 5) +
+  coord_map(xlim = c(-130, -70), ylim = c(24,50), "polyconic") + 
+  theme(panel.background = element_rect(fill = "lightblue"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        axis.line=element_blank(), axis.text.x=element_blank(), axis.text.y=element_blank(),axis.ticks=element_blank(), 
+        axis.title.x=element_blank(), axis.title.y=element_blank()) +
+theme(plot.margin=grid::unit(c(0,0,0,0), "mm"))
+inset
+```
+
+```{r final map, echo=TRUE, message=FALSE, warning=FALSE}
+ggdraw() +
+draw_plot(main_map) + 
+draw_plot(inset, x = 0.50, y = 0.50, width = 0.50, height = 0.50)
+```
